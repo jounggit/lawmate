@@ -1,9 +1,13 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 
 class UserBase(BaseModel):
     email: EmailStr
-    full_name: Optional[str] = None
+    full_name: str
+    nickname: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    marketing_consent: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str
@@ -22,8 +26,6 @@ class UserInDB(UserBase):
         from_attributes = True
         populate_by_name = True
         arbitrary_types_allowed = True
-        populate_by_name = True
-        arbitrary_types_allowed = True
 
 class UserResponse(UserBase):
     id: int
@@ -31,6 +33,19 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+class LawyerBase(BaseModel):
+    email: EmailStr
+    full_name: str
+    nickname: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+class LawyerCreate(LawyerBase):
+    password: str
+    license_number: str
+    specialization: List[str] = []
+    is_verified: bool = False
 
 class Token(BaseModel):
     access_token: str

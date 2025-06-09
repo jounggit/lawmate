@@ -14,7 +14,12 @@ async def read_users_me(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """현재 로그인한 사용자 정보 조회"""
-    return current_user
+    return {
+        "id": current_user.user_id,
+        "email": current_user.email,
+        "full_name": current_user.name,
+        "is_active": True
+    }
 
 @router.put("/me", response_model=UserResponse)
 async def update_user_me(
@@ -30,12 +35,23 @@ async def update_user_me(
     # 비밀번호가 있으면 해시 처리
     if "password" in update_data:
         from app.api.endpoints.auth import get_password_hash
-        update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+        update_data["password"] = get_password_hash(update_data.pop("password"))
     
     # 사용자 정보 업데이트
     for field, value in update_data.items():
-        setattr(current_user, field, value)
+        if field == "full_name":
+            # full_name은 name 필드에 매핑
+            setattr(current_user, "name", value)
+        else:
+            setattr(current_user, field, value)
     
     db.commit()
     db.refresh(current_user)
-    return current_user
+    
+    # 응답 데이터 구성
+    return {
+        "id": current_user.user_id,
+        "email": current_user.email,
+        "full_name": current_user.name,
+        "is_active": True
+    }

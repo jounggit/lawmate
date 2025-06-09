@@ -7,7 +7,7 @@ Base = declarative_base()
 
 # User 테이블
 class User(Base):
-    __tablename__ = "User"
+    __tablename__ = "user"  # 대문자 'User'에서 소문자 'user'로 변경
 
     user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(50), nullable=False)
