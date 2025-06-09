@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.document import DocumentResponse
 
@@ -19,16 +19,25 @@ class CaseUpdate(BaseModel):
     status: Optional[str] = None
 
 class CaseResponse(CaseBase):
-    id: int
+    id: int = Field(alias="aCase_id")
     status: str
     created_at: datetime
     updated_at: Optional[datetime] = None
+    claude_analysis: Optional[str] = None
+    legal_category: Optional[str] = None
+    keywords: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        populate_by_name = True
+        arbitrary_types_allowed = True
 
 class CaseWithDocuments(CaseResponse):
     documents: List[DocumentResponse]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        populate_by_name = True
+        arbitrary_types_allowed = True

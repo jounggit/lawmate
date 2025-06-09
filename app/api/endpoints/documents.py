@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Document, Case, User
+from app.db.models import Document, ACase, User
 from app.schemas.document import DocumentCreate, DocumentResponse, DocumentFormat
 from app.services.document_service import DocumentService
 from app.api.endpoints.auth import get_current_user
@@ -21,14 +21,14 @@ async def create_document(
     """법률 문서 초안 생성"""
     
     # 사례가 사용자의 것인지 확인
-    case = db.query(Case).filter(Case.id == document_in.case_id, Case.user_id == current_user.id).first()
+    case = db.query(ACase).filter(ACase.aCase_id == document_in.aCase_id, ACase.user_id == current_user.id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found or not owned by current user")
     
     # 문서 생성
     document = await document_service.create_document(
         db=db,
-        case_id=document_in.case_id,
+        case_id=document_in.aCase_id,
         doc_type=document_in.doc_type,
         recipient_info=document_in.recipient_info
     )
@@ -46,14 +46,28 @@ async def read_documents(
     """문서 목록 조회"""
     
     # 쿼리 기본 설정 - 사용자의 사례에 속한 문서만 조회
-    query = db.query(Document).join(Case).filter(Case.user_id == current_user.id)
+    query = db.query(Document).join(ACase).filter(ACase.user_id == current_user.id)
     
     # 특정 사례의 문서만 조회
     if case_id:
-        query = query.filter(Document.case_id == case_id)
+        query = query.filter(Document.aCase_id == case_id)
     
+    # 쿼리 실행
     documents = query.offset(skip).limit(limit).all()
-    return documents
+    
+    # 응답 포맷 구성
+    document_responses = []
+    for doc in documents:
+        document_responses.append({
+            "id": doc.id,
+            "title": doc.title,
+            "doc_type": doc.doc_type,
+            "content": doc.content,
+            "created_at": doc.generated_at,
+            "updated_at": None,
+            "aCase_id": doc.aCase_id
+        })
+    return document_responses
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def read_document(
@@ -62,15 +76,24 @@ async def read_document(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """특정 문서 조회"""
-    document = db.query(Document).join(Case).filter(
+    document = db.query(Document).join(ACase).filter(
         Document.id == document_id,
-        Case.user_id == current_user.id
+        ACase.user_id == current_user.id
     ).first()
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    return document
+    # 응답 포맷 구성
+    return {
+        "id": document.id,
+        "title": document.title,
+        "doc_type": document.doc_type,
+        "content": document.content,
+        "created_at": document.generated_at,
+        "updated_at": None,
+        "aCase_id": document.aCase_id
+    }
 
 @router.get("/{document_id}/download")
 async def download_document(
@@ -80,9 +103,9 @@ async def download_document(
     current_user: User = Depends(get_current_user)
 ) -> Any:
     """문서 다운로드"""
-    document = db.query(Document).join(Case).filter(
+    document = db.query(Document).join(ACase).filter(
         Document.id == document_id,
-        Case.user_id == current_user.id
+        ACase.user_id == current_user.id
     ).first()
     
     if not document:

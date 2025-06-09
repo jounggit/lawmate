@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 import datetime
 from app.services.claude_service import ClaudeService
-from app.db.models import Document, Case
+from app.db.models import Document, ACase
 from sqlalchemy.orm import Session
 
 class DocumentService:
@@ -18,16 +18,16 @@ class DocumentService:
         """사례 정보를 바탕으로 문서 초안 생성 및 저장"""
         
         # 사례 정보 조회
-        case = db.query(Case).filter(Case.id == case_id).first()
+        case = db.query(ACase).filter(ACase.aCase_id == case_id).first()
         if not case:
             raise ValueError(f"Case with ID {case_id} not found")
         
         # 사례 정보 딕셔너리 구성
         case_info = {
-            "id": case.id,
-            "title": case.title,
+            "id": case.aCase_id,
+            "title": getattr(case, 'title', '제목 없음'),  # title 필드가 없을 수 있음
             "description": case.description,
-            "legal_category": case.category,
+            "legal_category": getattr(case, 'aCase_type', None),  # aCase_type을 category로 매핑
             "status": case.status
         }
         
@@ -39,14 +39,15 @@ class DocumentService:
         )
         
         # 문서 제목 생성
-        document_title = f"{doc_type} - {case.title} ({datetime.datetime.now().strftime('%Y-%m-%d')})"
+        case_title = getattr(case, 'title', '제목 없음')  # title 필드가 없을 수 있음
+        document_title = f"{doc_type} - {case_title} ({datetime.datetime.now().strftime('%Y-%m-%d')})"
         
         # 문서 DB 저장
         new_document = Document(
             title=document_title,
             content=document_content,
             doc_type=doc_type,
-            case_id=case_id
+            aCase_id=case_id
         )
         
         db.add(new_document)
@@ -66,6 +67,9 @@ class DocumentService:
         
         # HTML 형식 (필요에 따라 스타일링 추가)
         elif format_type == "html":
+            # 라인 브레이크 처리
+            formatted_content = document.content.replace('\n', '<br>')
+            
             html_template = f"""
             <!DOCTYPE html>
             <html>
@@ -83,7 +87,7 @@ class DocumentService:
             <body>
                 <h1>{document.title}</h1>
                 <div class="date">{datetime.datetime.now().strftime('%Y년 %m월 %d일')}</div>
-                <div class="content">{document.content.replace('\n', '<br>')}</div>
+                <div class="content">{formatted_content}</div>
             </body>
             </html>
             """

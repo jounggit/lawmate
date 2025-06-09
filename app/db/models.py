@@ -75,9 +75,13 @@ class ACase(Base):
     aCase_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("User.user_id"), nullable=False)
     aCase_type = Column(String(50), nullable=False)
+    title = Column(String(200), nullable=True)
     description = Column(Text, nullable=False)
     status = Column(String(30), default="진행중")
     created_at = Column(DateTime, default=datetime.utcnow)
+    claude_analysis = Column(Text, nullable=True)  # Claude API 상담 내용 저장 필드
+    legal_category = Column(String(100), nullable=True)  # 법률 분야
+    keywords = Column(String(500), nullable=True)  # 키워드 (쉼표로 구분)
 
 # Matching_Log 테이블
 class MatchingLog(Base):
@@ -114,22 +118,76 @@ class Law(Base):
     __tablename__ = "Law"
 
     law_id = Column(Integer, primary_key=True, autoincrement=True)
-    law_name = Column(String(100), nullable=False)
-    category = Column(String(50))
-    article = Column(Text, nullable=False)
-    content = Column(Text, nullable=False)
-    last_updated = Column(Date)
-    source_url = Column(Text)
+    law_code = Column(String(20), unique=True, nullable=False)  # 법령 ID (국가법령정보 API에서 반환하는 lawId)
+    law_name = Column(String(100), nullable=False)  # 법령명
+    law_type = Column(String(50))  # 법종구분
+    promulgation_date = Column(String(10))  # 공포일자
+    link = Column(Text)  # 법령 링크
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# Law_Article 테이블 (법령 조문)
+class LawArticle(Base):
+    __tablename__ = "Law_Article"
+
+    article_id = Column(Integer, primary_key=True, autoincrement=True)
+    law_id = Column(Integer, ForeignKey("Law.law_id"), nullable=False)  # 법령 ID
+    article_number = Column(String(50), nullable=False)  # 조문번호
+    article_title = Column(String(200))  # 조문제목
+    content = Column(Text, nullable=False)  # 조문내용
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Law 테이블과의 관계 설정
+    law = relationship("Law", backref="articles")
+
+    # 동일 법령의 동일 조문번호는 중복되지 않음
+    __table_args__ = (
+        UniqueConstraint('law_id', 'article_number', name='uix_law_article'),
+    )
 
 # Precedent 테이블
 class Precedent(Base):
     __tablename__ = "Precedent"
 
     precedent_id = Column(Integer, primary_key=True, autoincrement=True)
-    aCase = Column(String(100), nullable=False)
-    aCase_number = Column(String(100), nullable=False)
-    decision_date = Column(Date)
-    summary = Column(Text)
-    judgment_text = Column(Text)
-    legal_basis = Column(Text)
-    source_url = Column(Text)
+    case_number = Column(String(100), unique=True, nullable=False)  # 사건번호
+    case_name = Column(String(200))  # 사건명
+    court = Column(String(100))  # 법원
+    decision_date = Column(String(10))  # 판결일자
+    summary = Column(Text)  # 판결요지
+    judgment_text = Column(Text)  # 판결내용
+    link = Column(Text)  # 판례 링크
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# aCase_Law 테이블 (aCase와 법령 연결)
+class ACaseLaw(Base):
+    __tablename__ = "aCase_Law"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aCase_id = Column(Integer, ForeignKey("aCase.aCase_id"), nullable=False)
+    law_id = Column(Integer, ForeignKey("Law.law_id"), nullable=False)
+    article_id = Column(Integer, ForeignKey("Law_Article.article_id"), nullable=True)  # 특정 조문을 참조하는 경우
+    relevance_score = Column(Integer, default=0)  # 관련성 점수 (0-100)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # 동일 사례에 동일 법령/조문 중복 방지
+    __table_args__ = (
+        UniqueConstraint('aCase_id', 'law_id', 'article_id', name='uix_case_law_article'),
+    )
+
+# aCase_Precedent 테이블 (aCase와 판례 연결)
+class ACasePrecedent(Base):
+    __tablename__ = "aCase_Precedent"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aCase_id = Column(Integer, ForeignKey("aCase.aCase_id"), nullable=False)
+    precedent_id = Column(Integer, ForeignKey("Precedent.precedent_id"), nullable=False)
+    relevance_score = Column(Integer, default=0)  # 관련성 점수 (0-100)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # 동일 사례에 동일 판례 중복 방지
+    __table_args__ = (
+        UniqueConstraint('aCase_id', 'precedent_id', name='uix_case_precedent'),
+    )

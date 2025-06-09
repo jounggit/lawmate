@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from enum import Enum
 
 class DocumentFormat(str, Enum):
@@ -12,7 +12,7 @@ class DocumentBase(BaseModel):
     doc_type: str
 
 class DocumentCreate(DocumentBase):
-    case_id: int
+    aCase_id: int
     recipient_info: Optional[Dict[str, Any]] = None
 
 class DocumentUpdate(BaseModel):
@@ -20,11 +20,13 @@ class DocumentUpdate(BaseModel):
     content: Optional[str] = None
 
 class DocumentResponse(DocumentBase):
-    id: int
+    id: int = Field(alias="doc_id")
     content: str
-    created_at: datetime
+    created_at: datetime = Field(alias="generated_at")
     updated_at: Optional[datetime] = None
-    case_id: int
+    aCase_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        populate_by_name = True
+        arbitrary_types_allowed = True

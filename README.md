@@ -14,6 +14,16 @@ LawMate(법친구)는 Claude AI를 활용하여 사용자의 법률 문제에 �
 - 전문 변호사 매칭 및 상담 연결
 - 사용자 간의 경험 공유를 위한 커뮤니티 기능
 
+## 주요 업데이트 내역
+
+### 2025.06.09 업데이트
+- aCase 테이블에 Claude API 상담 내용 저장 기능 추가
+  - 사용자 법률 상담 내용이 aCase 테이블에 저장됩니다.
+  - Claude API로 분석한 결과도 함께 저장됩니다.
+  - 새로운 필드: claude_analysis, legal_category, keywords
+- DB 마이그레이션 스크립트 추가
+  - 기존 데이터베이스 구조를 업데이트하기 위한 마이그레이션 스크립트 추가
+
 ## 기술 스택
 
 - 백엔드: Python, FastAPI
@@ -45,6 +55,9 @@ cp .env.example .env
 
 # 데이터베이스 테이블 생성
 # 애플리케이션 실행 시 자동으로 생성됩니다.
+
+# 마이그레이션 실행 (DB 스키마 업데이트)
+python app/db/run_migration.py
 ```
 
 3. 애플리케이션 실행
@@ -75,7 +88,9 @@ lawmate/
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── database.py         # 데이터베이스 연결 설정
-│   │   └── models.py           # SQLAlchemy 모델
+│   │   ├── models.py           # SQLAlchemy 모델
+│   │   ├── migrations/         # DB 마이그레이션 스크립트
+│   │   └── run_migration.py    # 마이그레이션 실행 스크립트
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── dependencies.py     # 의존성 주입
@@ -100,6 +115,21 @@ lawmate/
 ├── .env.example                # 환경 변수 예시
 └── requirements.txt            # 의존성 패키지
 ```
+
+## aCase 테이블 구조 (업데이트됨)
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| aCase_id | Integer | 기본 키 (자동 증가) |
+| user_id | Integer | 사용자 ID (외래 키) |
+| aCase_type | String(50) | 사례 유형 |
+| title | String(200) | 사례 제목 (추가됨) |
+| description | Text | 사례 설명 |
+| status | String(30) | 사례 상태 (기본값: "진행중") |
+| created_at | DateTime | 생성 일시 |
+| claude_analysis | Text | Claude API 분석 결과 (JSON 형식) (추가됨) |
+| legal_category | String(100) | 법률 분야 (추가됨) |
+| keywords | String(500) | 키워드 목록 (쉼표로 구분) (추가됨) |
 
 ## 라이센스
 

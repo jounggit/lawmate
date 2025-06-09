@@ -19,14 +19,18 @@ class UserInDB(UserBase):
     is_active: bool = True
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        populate_by_name = True
+        arbitrary_types_allowed = True
 
 class UserResponse(UserBase):
     id: int
     is_active: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
